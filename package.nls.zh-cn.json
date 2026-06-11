@@ -1,6 +1,6 @@
 {
-  "extension.description": "为 AI 思考提示语增添更从容、贴合本地语境的表达风格。",
+  "extension.description": "按需将本地化精选语句应用到 AI 思考提示语。",
   "command.apply.title": "ThePilot：将精选语句应用到 AI 思考提示语",
-  "command.reset.title": "ThePilot：将 AI 思考提示语恢复为默认内容",
-  "config.autoApply.description": "启动时自动将当前语言对应的精选语句应用到 AI 思考提示语。"
+  "command.reset.title": "ThePilot：恢复之前的 AI 思考提示语",
+  "config.autoApply.description": "启动时自动将当前语言对应的精选语句应用到 AI 思考提示语。默认关闭，避免未选择启用时改写用户设置。"
 }

@@ -1,6 +1,6 @@
 {
-  "extension.description": "Bring a composed, localized style to AI thinking prompts with curated phrases.",
+  "extension.description": "Apply localized curated phrases to AI thinking prompts on demand.",
   "command.apply.title": "ThePilot: Apply curated phrases to AI thinking prompts",
-  "command.reset.title": "ThePilot: Revert AI thinking prompts to defaults",
-  "config.autoApply.description": "Apply the current language's curated phrases to AI thinking prompts automatically on startup."
+  "command.reset.title": "ThePilot: Restore previous AI thinking prompts",
+  "config.autoApply.description": "Apply the current language's curated phrases to AI thinking prompts automatically on startup. Off by default so startup does not change user settings without opt-in."
 }

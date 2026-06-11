@@ -1,8 +1,15 @@
 import * as vscode from "vscode";
 import { phrasesByLocale, type SupportedLocale } from "./phrases";
+import { createThinkingPhrasesSetting, isThinkingPhrasesSetting } from "./settings";
 
 const SETTING_KEY = "chat.agent.thinking.phrases";
+const BACKUP_KEY = "previousThinkingPhrases";
 const EXT_DISPLAY = "ThePilot";
+
+type StoredSetting = {
+  hadValue: boolean;
+  value?: unknown;
+};
 
 const messages = {
   "zh-cn": {
@@ -10,7 +17,7 @@ const messages = {
     applied: (count: number) =>
       `${EXT_DISPLAY}：已成功应用 ${count} 条语录到 AI 思考提示语。`,
     applyError: (err: unknown) => `${EXT_DISPLAY}：应用语录时出错 - ${String(err)}`,
-    reset: `${EXT_DISPLAY}：已恢复默认 AI 思考提示语。`,
+    reset: `${EXT_DISPLAY}：已恢复之前的 AI 思考提示语。`,
     resetError: (err: unknown) => `${EXT_DISPLAY}：恢复默认设置时出错 - ${String(err)}`,
   },
   "zh-tw": {
@@ -18,7 +25,7 @@ const messages = {
     applied: (count: number) =>
       `${EXT_DISPLAY}：已成功套用 ${count} 條語錄到 AI 思考提示語。`,
     applyError: (err: unknown) => `${EXT_DISPLAY}：套用語錄時發生錯誤 - ${String(err)}`,
-    reset: `${EXT_DISPLAY}：已恢復預設 AI 思考提示語。`,
+    reset: `${EXT_DISPLAY}：已恢復先前的 AI 思考提示語。`,
     resetError: (err: unknown) => `${EXT_DISPLAY}：恢復預設設定時發生錯誤 - ${String(err)}`,
   },
   en: {
@@ -26,7 +33,7 @@ const messages = {
     applied: (count: number) =>
       `${EXT_DISPLAY}: Applied ${count} thinking phrases successfully.`,
     applyError: (err: unknown) => `${EXT_DISPLAY}: Failed to apply phrases - ${String(err)}`,
-    reset: `${EXT_DISPLAY}: Restored the default AI thinking phrases.`,
+    reset: `${EXT_DISPLAY}: Restored the previous AI thinking phrases.`,
     resetError: (err: unknown) => `${EXT_DISPLAY}: Failed to restore defaults - ${String(err)}`,
   },
 } satisfies Record<SupportedLocale, {
@@ -40,19 +47,19 @@ const messages = {
 export function activate(context: vscode.ExtensionContext): void {
   const applyCmd = vscode.commands.registerCommand(
     "motto.applyPhrases",
-    () => applyPhrases(true)
+    () => applyPhrases(context, true)
   );
 
   const resetCmd = vscode.commands.registerCommand(
     "motto.resetPhrases",
-    () => resetPhrases(true)
+    () => resetPhrases(context, true)
   );
 
   context.subscriptions.push(applyCmd, resetCmd);
 
   const config = vscode.workspace.getConfiguration("motto");
-  if (config.get<boolean>("autoApply", true)) {
-    applyPhrases(false);
+  if (config.get<boolean>("autoApply", false)) {
+    applyPhrases(context, false);
   }
 }
 
@@ -70,7 +77,10 @@ function resolveLocale(): SupportedLocale {
   return "en";
 }
 
-async function applyPhrases(showNotification: boolean): Promise<void> {
+async function applyPhrases(
+  context: vscode.ExtensionContext,
+  showNotification: boolean
+): Promise<void> {
   const locale = resolveLocale();
   const ui = messages[locale];
   const phrases = phrasesByLocale[locale];
@@ -82,9 +92,21 @@ async function applyPhrases(showNotification: boolean): Promise<void> {
 
   try {
     const config = vscode.workspace.getConfiguration();
+    const currentValue = config.inspect<unknown>(SETTING_KEY)?.globalValue;
+
+    if (
+      context.globalState.get<StoredSetting>(BACKUP_KEY) === undefined &&
+      !isKnownPhraseSet(currentValue)
+    ) {
+      await context.globalState.update(BACKUP_KEY, {
+        hadValue: currentValue !== undefined,
+        value: currentValue,
+      } satisfies StoredSetting);
+    }
+
     await config.update(
       SETTING_KEY,
-      phrases,
+      createThinkingPhrasesSetting(phrases),
       vscode.ConfigurationTarget.Global
     );
 
@@ -96,16 +118,22 @@ async function applyPhrases(showNotification: boolean): Promise<void> {
   }
 }
 
-async function resetPhrases(showNotification: boolean): Promise<void> {
+async function resetPhrases(
+  context: vscode.ExtensionContext,
+  showNotification: boolean
+): Promise<void> {
   const ui = messages[resolveLocale()];
 
   try {
     const config = vscode.workspace.getConfiguration();
+    const previous = context.globalState.get<StoredSetting>(BACKUP_KEY);
+
     await config.update(
       SETTING_KEY,
-      undefined,
+      previous?.hadValue ? previous.value : undefined,
       vscode.ConfigurationTarget.Global
     );
+    await context.globalState.update(BACKUP_KEY, undefined);
 
     if (showNotification) {
       vscode.window.showInformationMessage(ui.reset);
@@ -113,6 +141,19 @@ async function resetPhrases(showNotification: boolean): Promise<void> {
   } catch (err) {
     vscode.window.showErrorMessage(ui.resetError(err));
   }
+}
+
+function isKnownPhraseSet(value: unknown): boolean {
+  return Object.values(phrasesByLocale).some((phrases) =>
+    arraysEqual(value, phrases) ||
+    (isThinkingPhrasesSetting(value) && arraysEqual(value.phrases, phrases))
+  );
+}
+
+function arraysEqual(value: unknown, expected: string[]): boolean {
+  return Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((phrase, index) => phrase === expected[index]);
 }
 
 export function deactivate(): void {}
