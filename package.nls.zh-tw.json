@@ -1,0 +1,6 @@
+{
+  "extension.description": "為 AI 思考提示語增添更從容、貼近在地語境的表達風格。",
+  "command.apply.title": "ThePilot：將精選語句套用至 AI 思考提示語",
+  "command.reset.title": "ThePilot：將 AI 思考提示語還原為預設內容",
+  "config.autoApply.description": "啟動時自動將目前語言對應的精選語句套用至 AI 思考提示語。"
+}

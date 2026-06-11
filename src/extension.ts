@@ -1,8 +1,41 @@
 import * as vscode from "vscode";
-import { phrases } from "./phrases";
+import { phrasesByLocale, type SupportedLocale } from "./phrases";
 
 const SETTING_KEY = "chat.agent.thinking.phrases";
-const EXT_DISPLAY = "红星领航";
+const EXT_DISPLAY = "ThePilot";
+
+const messages = {
+  "zh-cn": {
+    empty: `${EXT_DISPLAY}：语录列表为空，请先补全文案。`,
+    applied: (count: number) =>
+      `${EXT_DISPLAY}：已成功应用 ${count} 条语录到 AI 思考提示语。`,
+    applyError: (err: unknown) => `${EXT_DISPLAY}：应用语录时出错 - ${String(err)}`,
+    reset: `${EXT_DISPLAY}：已恢复默认 AI 思考提示语。`,
+    resetError: (err: unknown) => `${EXT_DISPLAY}：恢复默认设置时出错 - ${String(err)}`,
+  },
+  "zh-tw": {
+    empty: `${EXT_DISPLAY}：語錄清單為空，請先補全文案。`,
+    applied: (count: number) =>
+      `${EXT_DISPLAY}：已成功套用 ${count} 條語錄到 AI 思考提示語。`,
+    applyError: (err: unknown) => `${EXT_DISPLAY}：套用語錄時發生錯誤 - ${String(err)}`,
+    reset: `${EXT_DISPLAY}：已恢復預設 AI 思考提示語。`,
+    resetError: (err: unknown) => `${EXT_DISPLAY}：恢復預設設定時發生錯誤 - ${String(err)}`,
+  },
+  en: {
+    empty: `${EXT_DISPLAY}: No phrases are configured yet.`,
+    applied: (count: number) =>
+      `${EXT_DISPLAY}: Applied ${count} thinking phrases successfully.`,
+    applyError: (err: unknown) => `${EXT_DISPLAY}: Failed to apply phrases - ${String(err)}`,
+    reset: `${EXT_DISPLAY}: Restored the default AI thinking phrases.`,
+    resetError: (err: unknown) => `${EXT_DISPLAY}: Failed to restore defaults - ${String(err)}`,
+  },
+} satisfies Record<SupportedLocale, {
+  empty: string;
+  applied: (count: number) => string;
+  applyError: (err: unknown) => string;
+  reset: string;
+  resetError: (err: unknown) => string;
+}>;
 
 export function activate(context: vscode.ExtensionContext): void {
   const applyCmd = vscode.commands.registerCommand(
@@ -23,11 +56,27 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 }
 
+function resolveLocale(): SupportedLocale {
+  const language = vscode.env.language.toLowerCase();
+
+  if (language === "zh-tw" || language === "zh-hk" || language === "zh-mo") {
+    return "zh-tw";
+  }
+
+  if (language.startsWith("zh")) {
+    return "zh-cn";
+  }
+
+  return "en";
+}
+
 async function applyPhrases(showNotification: boolean): Promise<void> {
+  const locale = resolveLocale();
+  const ui = messages[locale];
+  const phrases = phrasesByLocale[locale];
+
   if (phrases.length === 0) {
-    vscode.window.showWarningMessage(
-      `${EXT_DISPLAY}：语录列表为空，请先在 src/phrases.ts 中填入习近平语录。`
-    );
+    vscode.window.showWarningMessage(ui.empty);
     return;
   }
 
@@ -40,18 +89,16 @@ async function applyPhrases(showNotification: boolean): Promise<void> {
     );
 
     if (showNotification) {
-      vscode.window.showInformationMessage(
-        `${EXT_DISPLAY}：已成功应用 ${phrases.length} 条语录到 AI 思考提示语。`
-      );
+      vscode.window.showInformationMessage(ui.applied(phrases.length));
     }
   } catch (err) {
-    vscode.window.showErrorMessage(
-      `${EXT_DISPLAY}：应用语录时出错 — ${String(err)}`
-    );
+    vscode.window.showErrorMessage(ui.applyError(err));
   }
 }
 
 async function resetPhrases(showNotification: boolean): Promise<void> {
+  const ui = messages[resolveLocale()];
+
   try {
     const config = vscode.workspace.getConfiguration();
     await config.update(
@@ -61,14 +108,10 @@ async function resetPhrases(showNotification: boolean): Promise<void> {
     );
 
     if (showNotification) {
-      vscode.window.showInformationMessage(
-        `${EXT_DISPLAY}：已恢复默认 AI 思考提示语。`
-      );
+      vscode.window.showInformationMessage(ui.reset);
     }
   } catch (err) {
-    vscode.window.showErrorMessage(
-      `${EXT_DISPLAY}：恢复默认设置时出错 — ${String(err)}`
-    );
+    vscode.window.showErrorMessage(ui.resetError(err));
   }
 }
 

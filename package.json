@@ -1,11 +1,15 @@
 {
   "name": "motto",
-  "displayName": "红星领航",
-  "description": "用习近平新时代中国特色社会主义思想指引 AI 助手思考提示语，助力国企数字化转型。",
+  "displayName": "ThePilot",
+  "description": "%extension.description%",
   "version": "0.1.0",
   "publisher": "Cyvadra",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cyvadra/motto.git"
+  },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.121.0"
   },
   "categories": [
     "Other"
@@ -26,20 +30,20 @@
     "commands": [
       {
         "command": "motto.applyPhrases",
-        "title": "红星领航：应用习近平语录到 AI 思考提示语"
+        "title": "%command.apply.title%"
       },
       {
         "command": "motto.resetPhrases",
-        "title": "红星领航：恢复默认 AI 思考提示语"
+        "title": "%command.reset.title%"
       }
     ],
     "configuration": {
-      "title": "红星领航",
+      "title": "ThePilot",
       "properties": {
         "motto.autoApply": {
           "type": "boolean",
           "default": true,
-          "description": "启动时自动将习近平语录应用到 AI 思考提示语。"
+          "description": "%config.autoApply.description%"
         }
       }
     }
